@@ -13,9 +13,9 @@
   --accent: #0f766e;
   --danger: #c2410c;
   --sidebar: rgba(11, 24, 44, 0.95);
-  --sidebar-foreground: #edf3ff;
-  --sidebar-muted: rgba(237, 243, 255, 0.68);
-  --sidebar-active: rgba(255, 255, 255, 0.12);
+  --sidebar-foreground: #ffffff;
+  --sidebar-muted: rgba(255, 255, 255, 0.84);
+  --sidebar-active: rgba(255, 255, 255, 0.18);
 }
 
 @theme inline {

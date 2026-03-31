@@ -34,13 +34,8 @@ export async function proxy(request: NextRequest) {
   const isProtected = protectedPrefixes.some((prefix) => pathname.startsWith(prefix));
   const token = request.cookies.get("school_diary_session")?.value;
 
-  if (pathname.startsWith("/login") && token) {
-    try {
-      await verifySessionToken(token);
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    } catch {
-      return NextResponse.next();
-    }
+  if (pathname.startsWith("/login")) {
+    return NextResponse.next();
   }
 
   if (!isProtected) return NextResponse.next();
@@ -50,7 +45,9 @@ export async function proxy(request: NextRequest) {
     await verifySessionToken(token);
     return NextResponse.next();
   } catch {
-    return NextResponse.redirect(new URL("/login", request.url));
+    const response = NextResponse.redirect(new URL("/login", request.url));
+    response.cookies.delete("school_diary_session");
+    return response;
   }
 }
 

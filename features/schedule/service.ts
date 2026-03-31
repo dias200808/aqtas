@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { BoardSessionStatus, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getRoleContext } from "@/lib/context";
 import type { SessionUser } from "@/lib/auth/session";
@@ -13,6 +13,12 @@ export async function getScheduleView(user: SessionUser, studentId?: string) {
         subject: true,
         schoolClass: true,
         teacher: { include: { user: true } },
+        boardSessions: {
+          where: {
+            status: { in: [BoardSessionStatus.SCHEDULED, BoardSessionStatus.LIVE, BoardSessionStatus.PAUSED] },
+          },
+          select: { id: true, status: true },
+        },
       },
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
@@ -29,6 +35,12 @@ export async function getScheduleView(user: SessionUser, studentId?: string) {
         subject: true,
         schoolClass: true,
         teacher: { include: { user: true } },
+        boardSessions: {
+          where: {
+            status: { in: [BoardSessionStatus.SCHEDULED, BoardSessionStatus.LIVE, BoardSessionStatus.PAUSED] },
+          },
+          select: { id: true, status: true },
+        },
       },
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
@@ -41,6 +53,12 @@ export async function getScheduleView(user: SessionUser, studentId?: string) {
         subject: true,
         schoolClass: true,
         teacher: { include: { user: true } },
+        boardSessions: {
+          where: {
+            status: { in: [BoardSessionStatus.SCHEDULED, BoardSessionStatus.LIVE, BoardSessionStatus.PAUSED] },
+          },
+          select: { id: true, status: true },
+        },
       },
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
@@ -51,6 +69,12 @@ export async function getScheduleView(user: SessionUser, studentId?: string) {
       subject: true,
       schoolClass: true,
       teacher: { include: { user: true } },
+      boardSessions: {
+        where: {
+          status: { in: [BoardSessionStatus.SCHEDULED, BoardSessionStatus.LIVE, BoardSessionStatus.PAUSED] },
+        },
+        select: { id: true, status: true },
+      },
     },
     orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
   });

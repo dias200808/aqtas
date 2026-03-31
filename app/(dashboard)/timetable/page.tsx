@@ -4,10 +4,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ScheduleGrid } from "@/components/modules/schedule-grid";
 import { requireRole } from "@/lib/auth/session";
 import { getAdminCollections } from "@/features/admin/service";
+import { listEvents } from "@/features/calendar/service";
 
 export default async function TimetablePage() {
   const user = await requireRole([Role.ADMIN]);
   const data = await getAdminCollections(user);
+  const events = await listEvents(user);
 
   return (
     <div className="space-y-8">
@@ -38,7 +40,7 @@ export default async function TimetablePage() {
         }))}
       />
 
-      <ScheduleGrid entries={data.timetable} />
+      <ScheduleGrid entries={data.timetable} events={events} />
     </div>
   );
 }

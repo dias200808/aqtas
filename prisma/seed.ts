@@ -1,13 +1,18 @@
 import {
+  AppLanguage,
   AIInsightType,
   AnnouncementTargetRole,
   AttendanceStatus,
+  BoardSessionStatus,
   EventType,
   GradeType,
   HomeworkSubmissionStatus,
   InsightSeverity,
+  LessonGenerationMode,
   MessageThreadType,
   NotificationType,
+  PlanPeriod,
+  PlanStatus,
   RelationType,
   Role,
 } from "@prisma/client";
@@ -24,6 +29,9 @@ async function main() {
   await prisma.message.deleteMany();
   await prisma.messageParticipant.deleteMany();
   await prisma.messageThread.deleteMany();
+  await prisma.boardSession.deleteMany();
+  await prisma.lessonPackage.deleteMany();
+  await prisma.academicPlan.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.aIInsight.deleteMany();
   await prisma.auditLog.deleteMany();
@@ -408,6 +416,178 @@ async function main() {
         type: EventType.DEADLINE,
         classId: classes[1].id,
         createdByUserId: teachers[1].userId,
+      },
+    ],
+  });
+
+  const lessonPackages = await Promise.all([
+    prisma.lessonPackage.create({
+      data: {
+        teacherId: teachers[0].id,
+        classId: classes[0].id,
+        subjectId: subjects[0].id,
+        title: "Линейные уравнения: от правила к задаче",
+        topic: "Линейные уравнения",
+        objective: "Ученики понимают, как решать линейные уравнения и применять их в коротких текстовых задачах.",
+        durationMinutes: 45,
+        complexityLevel: "Базовый",
+        language: AppLanguage.RU,
+        generationMode: LessonGenerationMode.FULL,
+        lessonStyle: "Интерактивный",
+        activityCount: 3,
+        includeQuiz: true,
+        includeWorksheet: true,
+        includeHomework: true,
+        includeSummary: true,
+        includeSlides: true,
+        keyTerms: ["линейное уравнение", "неизвестное", "проверка ответа"],
+        lessonPlan: [
+          { title: "Разогрев", minutes: 5, goal: "Вспомнить базовые действия с равенствами." },
+          { title: "Объяснение", minutes: 15, goal: "Показать алгоритм решения уравнения по шагам." },
+          { title: "Практика", minutes: 15, goal: "Решить 3 уравнения в парах и обсудить ошибки." },
+          { title: "Итог", minutes: 10, goal: "Закрепить ключевое правило и задать домашнюю работу." },
+        ],
+        slides: [
+          { type: "TITLE", title: "Линейные уравнения", body: "Математика · 5A · цель урока и план работы", hint: "Спросите, что уже помнят об уравнениях." },
+          { type: "EXPLANATION", title: "Алгоритм решения", body: "Переносим известные числа, приводим подобные, находим неизвестное.", hint: "Покажите решение на одном примере у доски." },
+          { type: "ACTIVITY", title: "Практика в парах", body: "Решите 3 уравнения и обменяйтесь тетрадями для проверки.", hint: "Отметьте типичную ошибку до начала работы." },
+          { type: "QUIZ", title: "Быстрый квиз", body: "2 вопроса на понимание и 1 вопрос на применение.", hint: "Попросите учеников объяснить выбор ответа." },
+          { type: "HOMEWORK", title: "Домашнее задание", body: "Решить 4 уравнения и одну текстовую задачу.", hint: "Напомните формат записи решения." },
+        ],
+        quiz: [
+          { type: "single-choice", question: "Что нужно сделать первым при решении уравнения x + 5 = 12?", options: ["Вычесть 5 из обеих частей", "Прибавить 5", "Разделить на 5"], answerIndex: 0 },
+          { type: "true-false", question: "Ответ нужно проверить подстановкой.", answer: true },
+        ],
+        worksheet: [
+          { type: "fill-in-the-blank", task: "Заполните шаги решения уравнения x - 3 = 8." },
+          { type: "match-pairs", task: "Соотнесите уравнение и его решение." },
+        ],
+        homeworkText: "1. Решить 4 линейных уравнения.\n2. Проверить каждый ответ.\n3. Подготовить один собственный пример.",
+        summaryText: "К концу урока ученик умеет решить базовое линейное уравнение и проверить ответ.",
+        teacherNotes: "Сделайте акцент на проверке ответа и переносе слагаемых без потери знака.",
+        isPublished: true,
+      },
+    }),
+    prisma.lessonPackage.create({
+      data: {
+        teacherId: teachers[1].id,
+        classId: classes[1].id,
+        subjectId: subjects[4].id,
+        title: "Причины и последствия исторических реформ",
+        topic: "Исторические реформы",
+        objective: "Ученики сравнивают причины реформ и объясняют их влияние на общество.",
+        durationMinutes: 40,
+        complexityLevel: "Средний",
+        language: AppLanguage.RU,
+        generationMode: LessonGenerationMode.BOARD,
+        lessonStyle: "Дискуссионный",
+        activityCount: 4,
+        includeQuiz: true,
+        includeWorksheet: true,
+        includeHomework: true,
+        includeSummary: true,
+        includeSlides: true,
+        keyTerms: ["реформа", "причина", "последствие", "источник"],
+        lessonPlan: [
+          { title: "Вводный вопрос", minutes: 5, goal: "Активировать знания о причинах изменений в обществе." },
+          { title: "Работа с источником", minutes: 15, goal: "Выделить ключевые причины реформ." },
+          { title: "Обсуждение", minutes: 10, goal: "Сравнить последствия реформ для разных групп." },
+          { title: "Рефлексия", minutes: 10, goal: "Сформулировать итог в 2-3 тезисах." },
+        ],
+        slides: [
+          { type: "TITLE", title: "Исторические реформы", body: "История · 6B · причины и последствия", hint: "Попросите назвать знакомый пример реформы." },
+          { type: "TEXT_IMAGE", title: "Работа с источником", body: "Прочитайте короткий источник и выделите аргументы за реформу.", hint: "Подчеркните дату, участника и ключевое решение." },
+          { type: "POLL", title: "Мини-опрос", body: "Кто выиграл от реформы больше всего?", hint: "Соберите 3 разные позиции класса." },
+          { type: "SUMMARY", title: "Итог", body: "Назовите одну причину и одно последствие реформы.", hint: "Сравните ответы в парах." },
+        ],
+        quiz: [
+          { type: "single-choice", question: "Что лучше всего показывает причину реформы?", options: ["Проблема, которую хотели решить", "Цвет флага", "Имя свидетеля"], answerIndex: 0 },
+        ],
+        worksheet: [
+          { type: "short-answer", task: "Назовите две причины реформы и один итог." },
+        ],
+        homeworkText: "Подготовить мини-таблицу: причина реформы, действие, последствие.",
+        summaryText: "Ученики различают причины и последствия реформ и опираются на источник.",
+        teacherNotes: "Поддержите слабых учеников шаблоном ответа: причина -> действие -> итог.",
+        isPublished: false,
+      },
+    }),
+  ]);
+
+  await prisma.boardSession.createMany({
+    data: [
+      {
+        lessonPackageId: lessonPackages[0].id,
+        teacherId: teachers[0].id,
+        classId: classes[0].id,
+        subjectId: subjects[0].id,
+        status: BoardSessionStatus.LIVE,
+        currentBlockIndex: 2,
+        activityStateJson: { isOpen: true, revealAnswer: false },
+        timerStateJson: { status: "running", secondsRemaining: 90 },
+        revealedHints: ["Покажите решение на одном примере у доски."],
+      },
+      {
+        lessonPackageId: lessonPackages[1].id,
+        teacherId: teachers[1].id,
+        classId: classes[1].id,
+        subjectId: subjects[4].id,
+        status: BoardSessionStatus.PAUSED,
+        currentBlockIndex: 1,
+        activityStateJson: { isOpen: false, revealAnswer: false },
+        timerStateJson: { status: "stopped", secondsRemaining: 120 },
+        revealedHints: ["Подчеркните дату, участника и ключевое решение."],
+      },
+    ],
+  });
+
+  await prisma.academicPlan.createMany({
+    data: [
+      {
+        teacherId: teachers[0].id,
+        classId: classes[0].id,
+        subjectId: subjects[0].id,
+        title: "Годовой план по математике для 5A",
+        academicYear: "2025/2026",
+        period: PlanPeriod.ANNUAL,
+        status: PlanStatus.ACTIVE,
+        termLabel: "2025/2026",
+        objective: "Построить устойчивую математическую базу по числам, выражениям, уравнениям и задачам.",
+        expectedOutcomes: [
+          "Ученики уверенно выполняют базовые вычисления",
+          "Ученики решают линейные уравнения и объясняют шаги",
+          "Ученики применяют математику в текстовых задачах",
+        ],
+        checkpoints: [
+          "Квиз после каждого раздела",
+          "Практическая работа в конце четверти",
+          "Промежуточная диагностика в середине года",
+        ],
+        plannedLessons: 68,
+        completedLessons: 21,
+        language: AppLanguage.RU,
+      },
+      {
+        teacherId: teachers[1].id,
+        classId: classes[1].id,
+        subjectId: subjects[4].id,
+        title: "План 1 четверти по истории для 6B",
+        academicYear: "2025/2026",
+        period: PlanPeriod.QUARTER,
+        status: PlanStatus.ACTIVE,
+        termLabel: "1 четверть",
+        objective: "Провести блок по реформам и развитию общества с опорой на работу с источниками.",
+        expectedOutcomes: [
+          "Ученики называют причины исторических реформ",
+          "Ученики сравнивают последствия для разных групп",
+        ],
+        checkpoints: [
+          "Мини-эссе по реформам",
+          "Устный опрос по работе с источником",
+        ],
+        plannedLessons: 18,
+        completedLessons: 6,
+        language: AppLanguage.RU,
       },
     ],
   });

@@ -82,7 +82,7 @@ export async function buildClassReport(user: SessionUser, classId: string) {
 export async function buildAdminOverview(user: SessionUser) {
   if (user.role !== Role.ADMIN) throw new ApiError(403, "Forbidden");
 
-  const [userCount, studentCount, teacherCount, parentCount, announcementCount, eventCount] =
+  const [userCount, studentCount, teacherCount, parentCount, announcementCount, eventCount, lessonPackageCount, boardSessionCount, academicPlanCount] =
     await Promise.all([
       db.user.count(),
       db.studentProfile.count(),
@@ -90,6 +90,9 @@ export async function buildAdminOverview(user: SessionUser) {
       db.parentProfile.count(),
       db.announcement.count(),
       db.event.count(),
+      db.lessonPackage.count(),
+      db.boardSession.count(),
+      db.academicPlan.count(),
     ]);
 
   return {
@@ -99,5 +102,8 @@ export async function buildAdminOverview(user: SessionUser) {
     parentCount,
     announcementCount,
     eventCount,
+    lessonPackageCount,
+    boardSessionCount,
+    academicPlanCount,
   };
 }

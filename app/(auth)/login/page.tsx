@@ -1,6 +1,8 @@
+import { redirect } from "next/navigation";
 import { GraduationCap, Sparkles } from "lucide-react";
 import { LoginForm } from "@/components/forms/login-form";
 import { Card, CardContent } from "@/components/ui/card";
+import { getSessionUser } from "@/lib/auth/session";
 
 const demoAccounts = [
   { role: "Admin", email: "admin@aqtas.school" },
@@ -9,7 +11,12 @@ const demoAccounts = [
   { role: "Student", email: "student1@aqtas.school" },
 ];
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const user = await getSessionUser();
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="grid min-h-screen lg:grid-cols-[1.15fr_0.85fr]">
       <div className="relative hidden overflow-hidden bg-[linear-gradient(135deg,#0c2747,#1456c2_52%,#0f766e)] p-10 text-white lg:block">
@@ -37,13 +44,16 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Card className="border-white/15 bg-white/10 text-white">
+          <Card className="border-white/18 bg-white/14 text-white shadow-[0_24px_70px_-24px_rgba(5,10,25,0.6)]">
             <CardContent className="grid gap-4 py-6 md:grid-cols-2">
               {demoAccounts.map((account) => (
-                <div key={account.email} className="rounded-2xl border border-white/12 bg-white/8 p-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-blue-100/70">{account.role}</p>
-                  <p className="mt-2 text-sm font-semibold">{account.email}</p>
-                  <p className="mt-1 text-xs text-blue-100/70">Password: Demo123!</p>
+                <div
+                  key={account.email}
+                  className="rounded-2xl border border-white/18 bg-[rgba(13,27,48,0.18)] p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)] backdrop-blur-sm"
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-white/80">{account.role}</p>
+                  <p className="mt-2 text-sm font-semibold text-white">{account.email}</p>
+                  <p className="mt-1 text-xs font-medium text-white/80">Password: Demo123!</p>
                 </div>
               ))}
             </CardContent>

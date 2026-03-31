@@ -2,28 +2,29 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LogOut, School, Sparkles } from "lucide-react";
+import { LogOut, School } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Role } from "@prisma/client";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { translate, type AppLocale } from "@/lib/i18n";
 import { navigationItems } from "@/lib/navigation";
 import { useAppStore } from "@/lib/stores/app-store";
 import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth/session";
 
 const navGroups = [
-  { key: "main", label: "Workspace" },
-  { key: "admin", label: "Administration" },
-  { key: "system", label: "Account" },
+  { key: "main", labelKey: "groups.main" },
+  { key: "admin", labelKey: "groups.admin" },
+  { key: "system", labelKey: "groups.system" },
 ] as const;
 
-function SidebarContent({ user }: { user: SessionUser }) {
+function SidebarContent({ user, locale }: { user: SessionUser; locale: AppLocale }) {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar, setMobileNavOpen } = useAppStore();
 
   return (
-    <div className={cn("flex h-full flex-col text-slate-100", sidebarCollapsed ? "px-3" : "px-4")}>
+    <div className={cn("flex h-full flex-col text-[var(--sidebar-foreground)]", sidebarCollapsed ? "px-3" : "px-4")}>
       <div className="border-b border-white/10 pb-4 pt-6">
         <div className="flex items-center gap-3">
           <div className="rounded-2xl bg-white/10 p-3 text-white">
@@ -32,16 +33,18 @@ function SidebarContent({ user }: { user: SessionUser }) {
           {!sidebarCollapsed ? (
             <div>
               <p className="text-lg font-bold text-white">Aqtas Diary</p>
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-300">AI-first school OS</p>
+              <p className="text-xs uppercase tracking-[0.16em] text-[var(--sidebar-muted)]">
+                {translate(locale, "sidebar.productSubtitle")}
+              </p>
             </div>
           ) : null}
         </div>
         <button
           type="button"
-          className="mt-4 inline-flex rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/10 hover:text-white"
+          className="mt-4 inline-flex rounded-xl border border-white/14 bg-white/5 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/12 hover:text-white"
           onClick={toggleSidebar}
         >
-          {sidebarCollapsed ? "Expand" : "Collapse"}
+          {sidebarCollapsed ? translate(locale, "sidebar.expand") : translate(locale, "sidebar.collapse")}
         </button>
       </div>
 
@@ -50,7 +53,7 @@ function SidebarContent({ user }: { user: SessionUser }) {
         {!sidebarCollapsed ? (
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">{user.fullName}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-300">{user.role}</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--sidebar-muted)]">{user.role}</p>
           </div>
         ) : null}
       </div>
@@ -65,8 +68,8 @@ function SidebarContent({ user }: { user: SessionUser }) {
           return (
             <div key={group.key}>
               {!sidebarCollapsed ? (
-                <p className="px-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">
-                  {group.label}
+                <p className="px-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--sidebar-muted)]">
+                  {translate(locale, group.labelKey)}
                 </p>
               ) : null}
               <div className="mt-3 space-y-1">
@@ -80,12 +83,12 @@ function SidebarContent({ user }: { user: SessionUser }) {
                       className={cn(
                         "flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition",
                         active
-                          ? "bg-white/16 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                          : "text-slate-200 hover:bg-white/10 hover:text-white",
+                          ? "bg-[var(--sidebar-active)] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]"
+                          : "text-[var(--sidebar-foreground)] hover:bg-white/10 hover:text-white",
                       )}
                     >
-                      <item.icon className="h-5 w-5" />
-                      {!sidebarCollapsed ? <span>{item.label}</span> : null}
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      {!sidebarCollapsed ? <span>{translate(locale, item.labelKey)}</span> : null}
                     </Link>
                   );
                 })}
@@ -95,39 +98,27 @@ function SidebarContent({ user }: { user: SessionUser }) {
         })}
       </div>
 
-      <div className="mb-4 rounded-3xl border border-white/10 bg-white/6 p-4">
-        {!sidebarCollapsed ? (
-          <>
-            <div className="flex items-center gap-2 text-sm font-semibold text-white">
-              <Sparkles className="h-4 w-4 text-cyan-300" />
-              AI grounded mode
-            </div>
-            <p className="mt-2 text-xs leading-5 text-slate-300">
-              Summaries, risk alerts, and drafts are generated from live school records only.
-            </p>
-          </>
-        ) : (
-          <Sparkles className="mx-auto h-5 w-5 text-cyan-300" />
-        )}
-      </div>
-
       <form action="/api/auth/logout" method="post" className="pb-6">
-        <Button type="submit" variant="ghost" className="w-full justify-start text-slate-100 hover:bg-white/10 hover:text-white">
+        <Button
+          type="submit"
+          variant="ghost"
+          className="w-full justify-start rounded-2xl border border-white/18 bg-white/10 !text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)] hover:bg-white/18 hover:!text-white"
+        >
           <LogOut className="h-4 w-4" />
-          {!sidebarCollapsed ? "Logout" : null}
+          {!sidebarCollapsed ? translate(locale, "sidebar.logout") : null}
         </Button>
       </form>
     </div>
   );
 }
 
-export function Sidebar({ user }: { user: SessionUser }) {
+export function Sidebar({ user, locale }: { user: SessionUser; locale: AppLocale }) {
   const { mobileNavOpen, setMobileNavOpen } = useAppStore();
 
   return (
     <>
       <aside className="hidden h-screen w-[290px] shrink-0 border-r border-white/5 bg-[var(--sidebar)] lg:block">
-        <SidebarContent user={user} />
+        <SidebarContent user={user} locale={locale} />
       </aside>
 
       <AnimatePresence>
@@ -148,7 +139,7 @@ export function Sidebar({ user }: { user: SessionUser }) {
               exit={{ x: -320 }}
               transition={{ type: "spring", bounce: 0, duration: 0.32 }}
             >
-              <SidebarContent user={user} />
+              <SidebarContent user={user} locale={locale} />
             </motion.aside>
           </>
         ) : null}

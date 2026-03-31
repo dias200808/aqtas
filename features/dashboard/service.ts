@@ -1,4 +1,4 @@
-import { AttendanceStatus, HomeworkSubmissionStatus, Role } from "@prisma/client";
+import { AttendanceStatus, BoardSessionStatus, HomeworkSubmissionStatus, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getRoleContext } from "@/lib/context";
 import { average } from "@/lib/utils";
@@ -10,7 +10,7 @@ export async function getDashboardData(user: SessionUser, studentId?: string) {
   const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay();
 
   if (user.role === Role.STUDENT && context.student) {
-    const [todayLessons, homework, grades, attendance, events, notifications, insights] =
+    const [todayLessons, homework, grades, attendance, events, notifications, insights, liveSession] =
       await Promise.all([
         db.timetableEntry.findMany({
           where: { classId: context.student.classId ?? undefined, dayOfWeek },
@@ -55,6 +55,18 @@ export async function getDashboardData(user: SessionUser, studentId?: string) {
           orderBy: { createdAt: "desc" },
           take: 3,
         }),
+        db.boardSession.findFirst({
+          where: {
+            classId: context.student.classId ?? undefined,
+            status: { in: [BoardSessionStatus.LIVE, BoardSessionStatus.PAUSED, BoardSessionStatus.SCHEDULED] },
+          },
+          include: {
+            lessonPackage: true,
+            subject: true,
+            teacher: { include: { user: true } },
+          },
+          orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+        }),
       ]);
 
     return {
@@ -70,6 +82,7 @@ export async function getDashboardData(user: SessionUser, studentId?: string) {
       events,
       notifications,
       insights,
+      liveSession,
     };
   }
 
@@ -156,7 +169,7 @@ export async function getDashboardData(user: SessionUser, studentId?: string) {
       })
     ).map((student) => student.id);
 
-    const [todayLessons, homeworkReview, messagesCount, attendanceCount, grades, absenceRisks] =
+    const [todayLessons, homeworkReview, messagesCount, attendanceCount, grades, absenceRisks, liveBoardSessions] =
       await Promise.all([
         db.timetableEntry.findMany({
           where: { teacherId: context.teacher.id, dayOfWeek },
@@ -199,6 +212,19 @@ export async function getDashboardData(user: SessionUser, studentId?: string) {
           },
           _count: { _all: true },
         }),
+        db.boardSession.findMany({
+          where: {
+            teacherId: context.teacher.id,
+            status: { in: [BoardSessionStatus.SCHEDULED, BoardSessionStatus.LIVE, BoardSessionStatus.PAUSED] },
+          },
+          include: {
+            lessonPackage: true,
+            schoolClass: true,
+            subject: true,
+          },
+          orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
+          take: 4,
+        }),
       ]);
 
     const riskStudents = absenceRisks
@@ -213,6 +239,7 @@ export async function getDashboardData(user: SessionUser, studentId?: string) {
       attendanceCount,
       grades,
       riskStudents,
+      liveBoardSessions,
     };
   }
 

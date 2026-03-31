@@ -1,4 +1,5 @@
 import { Role } from "@prisma/client";
+import Link from "next/link";
 import {
   BellRing,
   BookOpenCheck,
@@ -13,6 +14,7 @@ import { ChildSwitcher } from "@/components/forms/child-switcher";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { formatDate, formatRelativeDay, timeAgo } from "@/lib/utils";
@@ -31,6 +33,13 @@ type StudentDashboardData = {
   notifications: Array<{ id: string }>;
   attendanceSummary: { present: number; absent: number; late: number };
   insights: Array<{ id: string; title: string; content: string }>;
+  liveSession: {
+    id: string;
+    status: string;
+    lessonPackage: { title: string };
+    subject: { name: string } | null;
+    teacher: { user: { firstName: string; lastName: string } };
+  } | null;
 };
 
 type ParentDashboardData = {
@@ -55,6 +64,13 @@ type TeacherDashboardData = {
   messagesCount: number;
   attendanceCount: number;
   riskStudents: Array<{ studentId: string; _count: { _all: number } }>;
+  liveBoardSessions: Array<{
+    id: string;
+    status: string;
+    lessonPackage: { title: string };
+    schoolClass: { name: string } | null;
+    subject: { name: string } | null;
+  }>;
 };
 
 type AdminDashboardData = {
@@ -129,16 +145,30 @@ export default async function DashboardPage({
 
             <Card>
               <CardHeader>
-                <CardTitle>Attendance pulse</CardTitle>
+                <CardTitle>{studentData.liveSession ? "Live lesson" : "Attendance pulse"}</CardTitle>
               </CardHeader>
               <CardContent>
-                <DonutChart
-                  data={[
-                    { label: "Present", value: studentData.attendanceSummary.present },
-                    { label: "Absent", value: studentData.attendanceSummary.absent },
-                    { label: "Late", value: studentData.attendanceSummary.late },
-                  ]}
-                />
+                {studentData.liveSession ? (
+                  <div className="space-y-4">
+                    <div className="rounded-2xl border bg-white/80 p-4">
+                      <p className="font-semibold">{studentData.liveSession.lessonPackage.title}</p>
+                      <p className="mt-2 text-sm text-[var(--muted)]">
+                        {studentData.liveSession.subject?.name ?? "Subject"} | {studentData.liveSession.teacher.user.firstName} {studentData.liveSession.teacher.user.lastName}
+                      </p>
+                    </div>
+                    <Button asChild>
+                      <Link href={`/board/join/${studentData.liveSession.id}`}>Join live lesson</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <DonutChart
+                    data={[
+                      { label: "Present", value: studentData.attendanceSummary.present },
+                      { label: "Absent", value: studentData.attendanceSummary.absent },
+                      { label: "Late", value: studentData.attendanceSummary.late },
+                    ]}
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -271,15 +301,36 @@ export default async function DashboardPage({
 
             <Card>
               <CardHeader>
-                <CardTitle>Students at risk</CardTitle>
+                <CardTitle>{teacherData.liveBoardSessions.length ? "Board sessions" : "Students at risk"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {teacherData.riskStudents.map((item) => (
-                  <div key={item.studentId} className="flex items-center justify-between rounded-2xl border bg-rose-50/70 p-4">
-                    <p className="font-semibold">Student {item.studentId.slice(0, 6)}</p>
-                    <Badge variant="danger">{item._count._all} alerts</Badge>
-                  </div>
-                ))}
+                {teacherData.liveBoardSessions.length
+                  ? teacherData.liveBoardSessions.map((item) => (
+                      <div key={item.id} className="rounded-2xl border bg-white/80 p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-semibold">{item.lessonPackage.title}</p>
+                            <p className="mt-1 text-sm text-[var(--muted)]">
+                              {item.schoolClass?.name ?? "Class"} | {item.subject?.name ?? "Subject"}
+                            </p>
+                          </div>
+                          <Badge variant={item.status === "LIVE" ? "success" : item.status === "PAUSED" ? "warning" : "info"}>
+                            {item.status}
+                          </Badge>
+                        </div>
+                        <div className="mt-3">
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/board/teach/${item.id}`}>Open board</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  : teacherData.riskStudents.map((item) => (
+                      <div key={item.studentId} className="flex items-center justify-between rounded-2xl border bg-rose-50/70 p-4">
+                        <p className="font-semibold">Student {item.studentId.slice(0, 6)}</p>
+                        <Badge variant="danger">{item._count._all} alerts</Badge>
+                      </div>
+                    ))}
               </CardContent>
             </Card>
           </div>

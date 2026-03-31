@@ -1,24 +1,236 @@
-# Aqtas Diary
+# Aqtas AI School Platform
 
-Production-grade MVP for an AI-first school electronic diary and student information platform built with `Next.js`, `TypeScript`, `PostgreSQL`, `Prisma`, and a backend-only grounded AI layer.
+Современная AI-first платформа для школы с ролями:
+- `Администратор`
+- `Учитель`
+- `Родитель`
+- `Ученик`
 
-## Stack
+В системе есть:
+- дашборды по ролям
+- расписание
+- домашние задания
+- оценки
+- посещаемость
+- сообщения
+- объявления и события
+- отчёты
+- AI-помощник
+- конструктор уроков
+- интерактивная доска
 
-- Frontend: `Next.js App Router`, `React`, `TypeScript`, `Tailwind CSS`, local shadcn-style UI primitives, `TanStack Query`, `Zustand`, `Framer Motion`, `Lucide`
-- Backend: `Next.js route handlers`, `Prisma`, `PostgreSQL`, `Zod`, JWT cookie auth, RBAC service layer
-- AI: backend-only endpoints with grounded Prisma context, optional OpenAI provider, deterministic fallback summaries
+## Быстрый запуск
 
-## Features
+### 1. Перейдите в папку проекта
 
-- Multi-role authentication: `Admin`, `Teacher`, `Parent`, `Student`
-- Left-sidebar dashboard shell with role-aware navigation
-- Role-specific dashboards
-- Schedule, homework, grades, attendance, messages, announcements, calendar, reports, AI assistant
-- Admin views for users, students, parents, teachers, classes, subjects, timetable, analytics, and system settings
-- CRUD APIs for core entities
-- Seeded demo data with realistic school workflows
+```powershell
+cd C:\Users\Student\Desktop\aqbobek\front
+```
 
-## Project Structure
+### 2. Установите зависимости
+
+```powershell
+npm install
+```
+
+### 3. Создайте файл `.env`
+
+Создайте в корне проекта файл `.env` и вставьте туда:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/school_diary?schema=public"
+JWT_SECRET="replace-with-a-long-random-string"
+NEXT_PUBLIC_APP_NAME="Aqtas Diary"
+AI_PROVIDER="gemini"
+GEMINI_API_KEY=""
+GEMINI_MODEL="gemini-2.5-flash"
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-4o-mini"
+PUSHER_APP_ID=""
+PUSHER_KEY=""
+PUSHER_SECRET=""
+PUSHER_CLUSTER="eu"
+NEXT_PUBLIC_PUSHER_KEY=""
+NEXT_PUBLIC_PUSHER_CLUSTER="eu"
+```
+
+Минимально обязательно для запуска:
+- `DATABASE_URL`
+- `JWT_SECRET`
+
+Для настоящего AI:
+- заполните `GEMINI_API_KEY`
+
+Для полной realtime-синхронизации доски:
+- заполните `PUSHER_*`
+
+## Настройка базы данных
+
+Проект работает с `PostgreSQL`.
+
+Есть 2 варианта:
+
+### Вариант A. PostgreSQL через Docker
+
+Если у вас установлен и запущен Docker Desktop:
+
+```powershell
+docker run --name school-postgres `
+  -e POSTGRES_USER=postgres `
+  -e POSTGRES_PASSWORD=postgres `
+  -e POSTGRES_DB=school_diary `
+  -p 5432:5432 `
+  -d postgres:16
+```
+
+Тогда в `.env` оставьте:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/school_diary?schema=public"
+```
+
+### Вариант B. Свой PostgreSQL
+
+Если PostgreSQL уже установлен:
+- убедитесь, что он запущен
+- создайте базу `school_diary`
+- при необходимости измените `DATABASE_URL`
+
+Пример:
+
+```env
+DATABASE_URL="postgresql://postgres:ВАШ_ПАРОЛЬ@localhost:5432/school_diary?schema=public"
+```
+
+## Первый запуск
+
+Выполните команды по порядку:
+
+```powershell
+npm run prisma:push
+npm run db:seed
+npm run dev
+```
+
+Потом откройте:
+
+```text
+http://localhost:3000
+```
+
+## Демо-аккаунты
+
+Пароль для всех тестовых пользователей:
+
+```text
+Demo123!
+```
+
+Основные аккаунты:
+- Админ: `admin@aqtas.school`
+- Учитель: `teacher1@aqtas.school`
+- Родитель: `parent1@aqtas.school`
+- Ученик: `student1@aqtas.school`
+
+Дополнительные аккаунты:
+- Учителя: `teacher2@aqtas.school`, `teacher3@aqtas.school`
+- Родители: `parent2@aqtas.school` - `parent5@aqtas.school`
+- Ученики: `student2@aqtas.school` - `student10@aqtas.school`
+
+## Полезные команды
+
+### Разработка
+
+```powershell
+npm run dev
+```
+
+### Проверка перед показом или сдачей
+
+```powershell
+npm run lint
+npm run build
+```
+
+### Prisma
+
+```powershell
+npm run prisma:generate
+npm run prisma:push
+npm run prisma:migrate -- --name init
+```
+
+### Повторно заполнить демо-данные
+
+```powershell
+npm run db:seed
+```
+
+## Что можно показать в демо
+
+После `db:seed` можно зайти под разными ролями и показать:
+
+- разные дашборды
+- создание и проверку домашки
+- создание и редактирование оценок
+- отметку посещаемости
+- расписание и недельный обзор
+- сообщения между родителями и учителями
+- объявления и события
+- управление пользователями, классами и расписанием
+- AI-помощника
+- конструктор уроков
+- интерактивную доску
+
+## Настройка AI
+
+### Gemini
+
+Если хотите использовать Gemini:
+
+```env
+AI_PROVIDER="gemini"
+GEMINI_API_KEY="your_key_here"
+GEMINI_MODEL="gemini-2.5-flash"
+```
+
+### OpenAI
+
+Если хотите использовать OpenAI:
+
+```env
+AI_PROVIDER="openai"
+OPENAI_API_KEY="your_key_here"
+OPENAI_MODEL="gpt-4o-mini"
+```
+
+### Как AI работает
+
+- вопросы про школу используют данные из базы
+- обычные вопросы вроде `что такое pi` или `что такое IELTS` идут как normal AI mode
+- если ключ провайдера не указан, будут использоваться fallback-ответы
+
+## Настройка интерактивной доски
+
+Для полной realtime-синхронизации используется `Pusher`.
+
+Если хотите, чтобы учитель и ученики синхронизировались в реальном времени, заполните:
+
+```env
+PUSHER_APP_ID=""
+PUSHER_KEY=""
+PUSHER_SECRET=""
+PUSHER_CLUSTER="eu"
+NEXT_PUBLIC_PUSHER_KEY=""
+NEXT_PUBLIC_PUSHER_CLUSTER="eu"
+```
+
+Если оставить их пустыми:
+- приложение всё равно запускается
+- страницы доски открываются
+- но realtime-синхронизация будет неполной
+
+## Структура проекта
 
 ```text
 app/
@@ -27,13 +239,11 @@ app/
   api/
 components/
   ai/
-  dashboard/
   forms/
   layout/
   messages/
   modules/
   providers/
-  shared/
   ui/
 features/
   admin/
@@ -45,214 +255,129 @@ features/
   dashboard/
   grades/
   homework/
+  lessons/
   messages/
+  planning/
   reports/
   schedule/
   students/
 lib/
   ai/
   auth/
-  context.ts
-  db.ts
-  navigation.ts
   permissions/
-  stores/
-  utils.ts
   validators/
 prisma/
   schema.prisma
   seed.ts
-proxy.ts
 ```
 
-## Environment Variables
+## Технологии
 
-Create `.env` from `.env.example`.
+- `Next.js 16`
+- `React`
+- `TypeScript`
+- `Tailwind CSS`
+- `TanStack Query`
+- `Zustand`
+- `Prisma`
+- `PostgreSQL`
+- `Zod`
+- `Pusher`
+- `Gemini / OpenAI`
 
-```env
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/school_diary?schema=public"
-JWT_SECRET="replace-with-a-long-random-string"
-NEXT_PUBLIC_APP_NAME="Aqtas Diary"
-OPENAI_API_KEY=""
-OPENAI_MODEL="gpt-4o-mini"
+## Частые ошибки
+
+### Ошибка: `Could not read package.json`
+
+Вы запустили команду не в той папке.
+
+Нужно:
+
+```powershell
+cd C:\Users\Student\Desktop\aqbobek\front
 ```
 
-## Installation
+### Ошибка: `Can't reach database server at localhost:5432`
 
-```bash
-npm install
+Значит PostgreSQL не запущен или не открыт на этом порту.
+
+Проверьте:
+
+```powershell
+docker ps
 ```
 
-## Database Setup
+Если базы нет, запустите:
 
-1. Start PostgreSQL.
-2. Create a database, for example `school_diary`.
-3. Update `DATABASE_URL` in `.env`.
-
-Run one of the following:
-
-```bash
-# preferred for a local first run
-npm run prisma:push
-
-# or create a migration
-npm run prisma:migrate -- --name init
+```powershell
+docker run --name school-postgres `
+  -e POSTGRES_USER=postgres `
+  -e POSTGRES_PASSWORD=postgres `
+  -e POSTGRES_DB=school_diary `
+  -p 5432:5432 `
+  -d postgres:16
 ```
 
-Seed the demo data:
+### Prisma работает, но приложение всё равно ругается на БД
 
-```bash
-npm run db:seed
-```
-
-## Development
-
-```bash
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-## Production Build Check
-
-```bash
-npm run lint
-npm run build
-```
-
-Both commands complete successfully in the current codebase.
-
-## Demo Credentials
-
-All seeded users use the same password:
+Проверьте, что `.env` находится именно здесь:
 
 ```text
-Demo123!
+front/.env
 ```
 
-Primary demo accounts:
+А не здесь:
 
-- Admin: `admin@aqtas.school`
-- Teacher: `teacher1@aqtas.school`
-- Parent: `parent1@aqtas.school`
-- Student: `student1@aqtas.school`
+```text
+front/,env
+```
 
-Additional accounts are seeded for broader demos:
+### AI отвечает шаблонно или уходит в fallback
 
-- Teachers: `teacher2@aqtas.school`, `teacher3@aqtas.school`
-- Parents: `parent2@aqtas.school` through `parent5@aqtas.school`
-- Students: `student2@aqtas.school` through `student10@aqtas.school`
+Проверьте:
+- заполнен ли `GEMINI_API_KEY` или `OPENAI_API_KEY`
+- перезапустили ли вы `npm run dev` после изменения `.env`
 
-## Role Model
+### Доска не синхронизируется в realtime
 
-- Student: own schedule, homework, grades, attendance, reports, AI guidance
-- Parent: linked child view, homework and attendance oversight, announcements, parent-facing AI summaries
-- Teacher: assigned class and subject scope, homework creation, grade entry, attendance marking, messaging, teacher AI summary
-- Admin: full platform access, analytics, user management, school operations overview
+Проверьте:
+- заполнены ли все `PUSHER_*`
+- вошли ли учитель и ученик в систему
+- перезапустили ли приложение после изменения `.env`
 
-## API Summary
+## Роли
 
-### Auth
+### Ученик
+- видит свой дашборд
+- своё расписание
+- домашние задания
+- оценки
+- посещаемость
+- AI-помощника для учёбы
 
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
+### Родитель
+- видит ребёнка
+- оценки и посещаемость
+- сообщения с учителями
+- понятные AI-сводки
 
-### Users
+### Учитель
+- работает со своими классами и предметами
+- создаёт домашку
+- ставит оценки
+- отмечает посещаемость
+- пользуется конструктором уроков и доской
 
-- `GET /api/users`
-- `POST /api/users`
-- `GET /api/users/:id`
-- `PATCH /api/users/:id`
-- `DELETE /api/users/:id`
+### Администратор
+- управляет пользователями
+- классами
+- расписанием
+- событиями
+- системой в целом
 
-### Students
+## Важно
 
-- `GET /api/students`
-- `GET /api/students/:id`
-- `GET /api/students/:id/dashboard`
-- `GET /api/students/:id/grades`
-- `GET /api/students/:id/attendance`
-- `GET /api/students/:id/homework`
-
-### Homework
-
-- `GET /api/homework`
-- `POST /api/homework`
-- `GET /api/homework/:id`
-- `PATCH /api/homework/:id`
-- `DELETE /api/homework/:id`
-- `POST /api/homework/:id/submit`
-
-### Grades
-
-- `GET /api/grades`
-- `POST /api/grades`
-- `PATCH /api/grades/:id`
-- `DELETE /api/grades/:id`
-
-### Attendance
-
-- `GET /api/attendance`
-- `POST /api/attendance`
-- `PATCH /api/attendance/:id`
-
-### Messages
-
-- `GET /api/threads`
-- `POST /api/threads`
-- `GET /api/threads/:id/messages`
-- `POST /api/messages`
-
-### Announcements and Events
-
-- `GET /api/announcements`
-- `POST /api/announcements`
-- `PATCH /api/announcements/:id`
-- `GET /api/events`
-- `POST /api/events`
-- `PATCH /api/events/:id`
-
-### Reports
-
-- `GET /api/reports/student/:id`
-- `GET /api/reports/class/:id`
-- `GET /api/reports/admin/overview`
-
-### AI
-
-- `POST /api/ai/day-summary`
-- `POST /api/ai/week-summary`
-- `POST /api/ai/risk-analysis`
-- `POST /api/ai/study-plan`
-- `POST /api/ai/teacher-summary`
-- `POST /api/ai/message-draft`
-- `POST /api/ai/explain-topic`
-
-## AI Architecture
-
-- Client never calls the LLM provider directly.
-- Every AI request hits a backend route handler.
-- Backend services assemble grounded school facts from Prisma queries.
-- If `OPENAI_API_KEY` is present, the provider layer can generate concise grounded responses.
-- If no provider is available, deterministic fallback summaries still work.
-- AI insights are stored in the database for history and dashboard reuse.
-
-## Architecture Notes
-
-- `lib/auth/*`: JWT session handling and password utilities
-- `lib/permissions/*`: RBAC and scope enforcement
-- `features/*/service.ts`: business logic shared by pages and APIs
-- `proxy.ts`: protected routing for dashboard and admin surfaces
-- `prisma/schema.prisma`: normalized school data model
-- `prisma/seed.ts`: realistic seeded demo environment
-
-## Demo Flow
-
-After seeding, you can:
-
-1. Sign in as each role from `/login`.
-2. Open role-specific dashboards from the sidebar.
-3. Review schedules, homework, grades, attendance, messages, announcements, and reports.
-4. Create homework, grades, attendance records, announcements, events, and users with authorized roles.
-5. Trigger grounded AI summaries and message drafts from the AI module.
+- ключи AI никогда не уходят на клиент
+- права ролей проверяются на backend
+- демо-данные уже подготовлены для реального показа
+- это полноценное full-stack приложение, а не статичный макет

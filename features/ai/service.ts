@@ -3,9 +3,20 @@ import { db } from "@/lib/db";
 import { getRoleContext } from "@/lib/context";
 import { ApiError } from "@/lib/api";
 import { canAccessStudent } from "@/lib/permissions";
-import { generateWithProvider } from "@/lib/ai/provider";
+import { generateWithProviderDetailed } from "@/lib/ai/provider";
 import { average } from "@/lib/utils";
 import type { SessionUser } from "@/lib/auth/session";
+
+type AiResponse = {
+  title: string;
+  content: string;
+  meta: {
+    source: "openai" | "gemini" | "fallback";
+    model: string;
+    providerLabel: "OpenAI" | "Gemini" | "Fallback";
+    reason?: string;
+  };
+};
 
 function formatShortDate(value: Date | string) {
   return new Date(value).toLocaleDateString("en-US", {
@@ -164,24 +175,136 @@ async function groundedGeneration({
   severity?: InsightSeverity;
   persist?: boolean;
   systemPrompt?: string;
-}) {
+}): Promise<AiResponse> {
   const prompt = `Use only these verified school facts. If information is missing, say so.\n\n${facts
     .map((fact, index) => `${index + 1}. ${fact}`)
     .join("\n")}\n\nReturn a concise practical answer.`;
 
-  const providerText = await generateWithProvider({
+  const providerResult = await generateWithProviderDetailed({
     system:
       systemPrompt ||
       "You are an education assistant. Never invent grades, attendance, homework, or events. Use only the provided facts.",
     prompt,
+    temperature: 0.35,
   });
 
-  const content = providerText || fallback;
+  const content = providerResult.content || fallback;
   if (persist) {
     await persistInsight(user, studentId, type, title, content, severity);
   }
 
-  return { title, content };
+  return {
+    title,
+    content,
+    meta: {
+      source: providerResult.content ? providerResult.source : "fallback",
+      model: providerResult.model,
+      providerLabel: providerResult.content ? providerResult.providerLabel : "Fallback",
+      reason: providerResult.content ? undefined : providerResult.reason,
+    },
+  };
+}
+
+function buildGeneralAssistantSystemPrompt(user: SessionUser) {
+  const roleGuidance =
+    user.role === Role.PARENT
+      ? "Explain things in very simple parent-friendly language."
+      : user.role === Role.STUDENT
+        ? "Explain things clearly for a student and include simple examples when useful."
+        : user.role === Role.TEACHER
+          ? "Answer like a strong teaching assistant: clear, practical, and accurate."
+          : "Answer clearly and professionally.";
+
+  return [
+    "You are a helpful AI education assistant inside a school platform.",
+    "You may answer normal educational questions, study questions, definitions, math concepts, exam explanations, and practical learning advice.",
+    "Do not repeat boilerplate. Do not mention missing school facts unless the user is clearly asking about student records, grades, homework, attendance, or school events.",
+    "For general knowledge questions, answer directly and naturally.",
+    "Respond in the same language as the user unless they ask for another language.",
+    roleGuidance,
+  ].join(" ");
+}
+
+function looksLikeSchoolDataQuestion(question: string) {
+  const normalized = question.toLowerCase();
+  const schoolKeywords = [
+    "grade",
+    "grades",
+    "attendance",
+    "absent",
+    "late",
+    "homework",
+    "assignment",
+    "schedule",
+    "calendar",
+    "event",
+    "school",
+    "class",
+    "student",
+    "teacher",
+    "parent",
+    "risk",
+    "diary",
+    "report",
+    "my child",
+    "my son",
+    "my daughter",
+    "my class",
+    "my student",
+    "оцен",
+    "посещ",
+    "опозд",
+    "домаш",
+    "задан",
+    "распис",
+    "календар",
+    "событ",
+    "школ",
+    "класс",
+    "ученик",
+    "учениц",
+    "учител",
+    "родител",
+    "риск",
+    "отчет",
+    "дневник",
+    "мой ребенок",
+    "моя дочь",
+    "мой сын",
+    "мой класс",
+    "мой ученик",
+  ];
+
+  return schoolKeywords.some((keyword) => normalized.includes(keyword));
+}
+
+async function generalGeneration({
+  title,
+  user,
+  prompt,
+  fallback,
+}: {
+  title: string;
+  user: SessionUser;
+  prompt: string;
+  fallback: string;
+}): Promise<AiResponse> {
+  const providerResult = await generateWithProviderDetailed({
+    system: buildGeneralAssistantSystemPrompt(user),
+    prompt,
+    temperature: 0.8,
+  });
+
+  return {
+    title,
+    content: providerResult.content || fallback,
+    meta: {
+      source: providerResult.content ? providerResult.source : "fallback",
+      model: providerResult.model,
+      providerLabel: providerResult.content ? providerResult.providerLabel : "Fallback",
+      reason: providerResult.content ? undefined : providerResult.reason,
+    },
+  };
 }
 
 function buildStudentQuestionFallback(
@@ -477,6 +600,18 @@ export async function answerAssistantQuestion(user: SessionUser, question?: stri
   const cleanQuestion = question?.trim();
   if (!cleanQuestion) throw new ApiError(400, "Please enter a question");
 
+  const shouldUseGeneralKnowledgeMode = !looksLikeSchoolDataQuestion(cleanQuestion);
+
+  if (shouldUseGeneralKnowledgeMode) {
+    return generalGeneration({
+      title: "AI assistant",
+      user,
+      prompt: `Answer the user's question directly.\n\nQuestion: ${cleanQuestion}`,
+      fallback:
+        "The AI provider is unavailable right now. Please try again in a moment. If this keeps happening, check GEMINI_API_KEY in .env.",
+    });
+  }
+
   if (user.role === Role.TEACHER && !studentId) {
     const snapshot = await getTeacherSnapshot(user);
     const facts = [
@@ -582,21 +717,19 @@ export async function generateMessageDraft(user: SessionUser, message?: string) 
 }
 
 export async function explainTopic(user: SessionUser, topic?: string) {
-  const facts = [
-    `Requested topic: ${topic || "Not provided"}`,
-    `User role: ${user.role}`,
-  ];
+  const cleanTopic = topic?.trim();
+  if (!cleanTopic) throw new ApiError(400, "Please enter a topic");
 
-  const fallback = topic
-    ? `${topic} can be explained more simply once a teacher, subject, or assignment context is provided. Right now I can only give a generic explanation because there is no linked school record for the topic.`
-    : "There is not enough topic information to explain anything accurately.";
-
-  return groundedGeneration({
-    type: AIInsightType.TOPIC_EXPLANATION,
+  return generalGeneration({
     title: "Topic explanation",
     user,
-    studentId: null,
-    facts,
-    fallback,
+    prompt: [
+      `Explain this clearly: ${cleanTopic}`,
+      "Start with a simple definition.",
+      "Then give a short example.",
+      "If helpful, add where it is used in study or real life.",
+    ].join("\n"),
+    fallback:
+      "The AI provider is unavailable right now, so I cannot generate a normal topic explanation. Please check GEMINI_API_KEY and try again.",
   });
 }

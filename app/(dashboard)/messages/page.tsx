@@ -6,7 +6,7 @@ export default function MessagesPage() {
     <div className="space-y-8">
       <PageHeader
         title="Messages"
-        description="Keep communication safe, organized, and role-aware with searchable threads and real-time context."
+        description="Parents can reach teachers directly, view school contact details, and create safe group chats with role-based access."
       />
       <MessagesWorkspace />
     </div>

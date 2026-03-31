@@ -77,6 +77,9 @@ enum NotificationType {
   EVENT
   AI
   SYSTEM
+  BOARD_SESSION
+  BOARD_ACTIVITY
+  BOARD_RECONNECT
 }
 
 enum AIInsightType {
@@ -93,6 +96,65 @@ enum InsightSeverity {
   LOW
   MEDIUM
   HIGH
+}
+
+enum AppLanguage {
+  RU
+  EN
+}
+
+enum LessonGenerationMode {
+  QUICK
+  FULL
+  QUIZ
+  WORKSHEET
+  HOMEWORK
+  REVISION
+  TEST_PREP
+  BOARD
+}
+
+enum PlanPeriod {
+  ANNUAL
+  QUARTER
+  MONTHLY
+  WEEKLY
+  LESSON
+}
+
+enum PlanStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+enum BoardSessionStatus {
+  DRAFT
+  SCHEDULED
+  LIVE
+  PAUSED
+  ENDED
+  ARCHIVED
+}
+
+enum BoardSyncMode {
+  FULLY_SYNCED
+  SEMI_CONTROLLED
+  FREE_REVIEW
+}
+
+enum BoardParticipantStatus {
+  INVITED
+  JOINED
+  DISCONNECTED
+  RECONNECTED
+  REMOVED
+}
+
+enum BoardConnectionState {
+  ONLINE
+  RECONNECTING
+  OFFLINE
 }
 
 model User {
@@ -135,6 +197,8 @@ model StudentProfile {
   grades              Grade[]
   attendances         Attendance[]
   insights            AIInsight[]
+  boardParticipations BoardSessionParticipant[]
+  boardResponses      BoardSessionResponse[]
 
   @@index([classId])
 }
@@ -155,6 +219,9 @@ model TeacherProfile {
   homeworks       Homework[]
   grades          Grade[]
   timetable       TimetableEntry[]
+  lessonPackages  LessonPackage[]
+  boardSessions   BoardSession[]
+  academicPlans   AcademicPlan[]
 }
 
 model ParentStudentRelation {
@@ -179,6 +246,9 @@ model SchoolClass {
   homeworks      Homework[]
   announcements  Announcement[]
   events         Event[]
+  lessonPackages LessonPackage[]
+  boardSessions  BoardSession[]
+  academicPlans  AcademicPlan[]
 
   @@unique([name, academicYear])
 }
@@ -192,6 +262,9 @@ model Subject {
   timetable      TimetableEntry[]
   homeworks      Homework[]
   grades         Grade[]
+  lessonPackages LessonPackage[]
+  boardSessions  BoardSession[]
+  academicPlans  AcademicPlan[]
 }
 
 model TeacherSubjectClass {
@@ -219,6 +292,7 @@ model TimetableEntry {
   subject      Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   teacher      TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   attendances  Attendance[]
+  boardSessions BoardSession[]
 
   @@index([classId, dayOfWeek])
 }
@@ -378,6 +452,7 @@ model Notification {
   title     String
   body      String
   link      String?
+  payloadJson Json?
   isRead    Boolean          @default(false)
   createdAt DateTime         @default(now())
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -407,4 +482,184 @@ model AuditLog {
   payloadJson Json?
   createdAt   DateTime @default(now())
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model LessonPackage {
+  id               String               @id @default(cuid())
+  teacherId        String
+  classId          String?
+  subjectId        String?
+  title            String
+  topic            String
+  objective        String
+  durationMinutes  Int
+  complexityLevel  String
+  language         AppLanguage          @default(RU)
+  generationMode   LessonGenerationMode @default(FULL)
+  lessonStyle      String?
+  activityCount    Int                  @default(3)
+  includeQuiz      Boolean              @default(true)
+  includeWorksheet Boolean              @default(true)
+  includeHomework  Boolean              @default(true)
+  includeSummary   Boolean              @default(true)
+  includeSlides    Boolean              @default(true)
+  keyTerms         Json?
+  lessonPlan       Json?
+  slides           Json?
+  quiz             Json?
+  worksheet        Json?
+  homeworkText     String?
+  summaryText      String?
+  teacherNotes     String?
+  isPublished      Boolean              @default(false)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  teacher          TeacherProfile       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  schoolClass      SchoolClass?         @relation(fields: [classId], references: [id])
+  subject          Subject?             @relation(fields: [subjectId], references: [id])
+  lessonBlocks     LessonBlock[]
+  boardSessions    BoardSession[]
+
+  @@index([teacherId, createdAt])
+}
+
+model LessonBlock {
+  id               String        @id @default(cuid())
+  lessonPackageId  String
+  orderIndex       Int
+  blockType        String
+  title            String
+  instructions     String?
+  contentJson      Json
+  settingsJson     Json?
+  answerKeyJson    Json?
+  hint             String?
+  teacherNote      String?
+  estimatedSeconds Int?
+  isGradable       Boolean       @default(false)
+  isPracticeOnly   Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  lessonPackage    LessonPackage @relation(fields: [lessonPackageId], references: [id], onDelete: Cascade)
+  responses        BoardSessionResponse[]
+  activeInSessions BoardSession[]
+
+  @@unique([lessonPackageId, orderIndex])
+  @@index([lessonPackageId, blockType])
+}
+
+model BoardSession {
+  id                  String                  @id @default(cuid())
+  lessonPackageId     String
+  teacherId           String
+  classId             String?
+  subjectId           String?
+  timetableEntryId    String?
+  status              BoardSessionStatus      @default(DRAFT)
+  syncMode            BoardSyncMode           @default(FULLY_SYNCED)
+  allowLateJoin       Boolean                 @default(true)
+  allowImmediateJoin  Boolean                 @default(true)
+  allowFreeNavigation Boolean                 @default(false)
+  showResponsesLive   Boolean                 @default(true)
+  gradedMode          Boolean                 @default(false)
+  currentBlockId      String?
+  currentBlockIndex   Int                     @default(0)
+  activityStateJson   Json?
+  timerStateJson      Json?
+  revealedHints       Json?
+  scheduledFor        DateTime?
+  startedAt           DateTime?
+  endedAt             DateTime?
+  archivedAt          DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  lessonPackage       LessonPackage           @relation(fields: [lessonPackageId], references: [id], onDelete: Cascade)
+  teacher             TeacherProfile          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  schoolClass         SchoolClass?            @relation(fields: [classId], references: [id])
+  subject             Subject?                @relation(fields: [subjectId], references: [id])
+  timetableEntry      TimetableEntry?         @relation(fields: [timetableEntryId], references: [id])
+  currentBlock        LessonBlock?            @relation(fields: [currentBlockId], references: [id], onDelete: SetNull)
+  participants        BoardSessionParticipant[]
+  responses           BoardSessionResponse[]
+  events              BoardSessionEvent[]
+
+  @@index([teacherId, createdAt])
+  @@index([classId, status])
+}
+
+model BoardSessionParticipant {
+  id              String                 @id @default(cuid())
+  sessionId       String
+  studentId       String
+  status          BoardParticipantStatus @default(INVITED)
+  connectionState BoardConnectionState   @default(OFFLINE)
+  joinedAt        DateTime?
+  leftAt          DateTime?
+  lastSeenAt      DateTime?
+  removedAt       DateTime?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  session         BoardSession           @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student         StudentProfile         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, studentId])
+  @@index([sessionId, status])
+}
+
+model BoardSessionResponse {
+  id            String        @id @default(cuid())
+  sessionId     String
+  blockId       String
+  studentId     String
+  attempt       Int           @default(1)
+  responseJson  Json?
+  isSubmitted   Boolean       @default(false)
+  submittedAt   DateTime?
+  score         Float?
+  feedback      String?
+  isAutoChecked Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  session       BoardSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  block         LessonBlock   @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, blockId, studentId, attempt])
+  @@index([sessionId, blockId])
+}
+
+model BoardSessionEvent {
+  id         String       @id @default(cuid())
+  sessionId  String
+  eventType  String
+  payloadJson Json?
+  createdAt  DateTime     @default(now())
+  session    BoardSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+}
+
+model AcademicPlan {
+  id               String      @id @default(cuid())
+  teacherId        String
+  classId          String?
+  subjectId        String?
+  title            String
+  academicYear     String
+  period           PlanPeriod
+  status           PlanStatus  @default(DRAFT)
+  termLabel        String?
+  objective        String
+  expectedOutcomes Json?
+  checkpoints      Json?
+  plannedLessons   Int
+  completedLessons Int         @default(0)
+  language         AppLanguage @default(RU)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  teacher          TeacherProfile @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  schoolClass      SchoolClass?    @relation(fields: [classId], references: [id])
+  subject          Subject?        @relation(fields: [subjectId], references: [id])
+
+  @@index([teacherId, academicYear])
 }

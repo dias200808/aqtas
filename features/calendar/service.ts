@@ -78,3 +78,14 @@ export async function updateEvent(
     },
   });
 }
+
+export async function deleteEvent(user: SessionUser, id: string) {
+  const event = await db.event.findUnique({ where: { id } });
+  if (!event) throw new ApiError(404, "Event not found");
+  if (user.role !== Role.ADMIN && event.createdByUserId !== user.id) {
+    throw new ApiError(403, "You cannot delete this event");
+  }
+
+  await db.event.delete({ where: { id } });
+  return { id };
+}
